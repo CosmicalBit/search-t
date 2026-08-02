@@ -16,7 +16,7 @@
 <h2>About</h2>
 
 <p>
-  <code>search-t</code> recursively searches files below the current directory
+  <code>sf</code> recursively searches files below the current directory
   for a byte pattern. Work is distributed across threads, and every result
   includes its relative path, zero-based line and column, and a highlighted
   match.
@@ -31,7 +31,7 @@
 
 <p>Run the command from the directory you want to search:</p>
 
-<pre><code>search-t "needle"</code></pre>
+<pre><code>sf "needle"</code></pre>
 
 <p>Example output:</p>
 
@@ -46,8 +46,8 @@
   <a href="https://github.com/SomeFlyingThing/search-t/releases">releases page</a>.
 </p>
 
-<pre><code>tar -xzf search-t-v0.1.0-x86_64-unknown-linux-gnu.tar.gz
-install -m 755 search-t ~/.local/bin/search-t</code></pre>
+<pre><code>tar -xzf sf-v0.1.0-x86_64-unknown-linux-gnu.tar.gz
+install -m 755 sf ~/.local/bin/sf</code></pre>
 
 <h3>Build from source</h3>
 
@@ -60,7 +60,7 @@ install -m 755 search-t ~/.local/bin/search-t</code></pre>
 <pre><code>git clone https://github.com/SomeFlyingThing/search-t.git
 cd search-t
 cargo build --release --locked
-install -m 755 target/release/search-t ~/.local/bin/search-t</code></pre>
+install -m 755 target/release/sf ~/.local/bin/sf</code></pre>
 
 <h2>Development</h2>
 
@@ -68,6 +68,7 @@ install -m 755 target/release/search-t ~/.local/bin/search-t</code></pre>
 
 <pre><code>cargo fmt --all -- --check
 cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo build --locked --verbose
 cargo test --locked</code></pre>
 
 <h2>Publishing a release</h2>

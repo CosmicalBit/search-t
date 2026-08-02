@@ -36,8 +36,8 @@ jobs:
       - name: Package binary and checksum
         shell: bash
         run: |
-          archive="search-t-${GITHUB_REF_NAME}-${TARGET}.tar.gz"
-          tar -C "target/${TARGET}/release" -czf "$archive" search-t
+          archive="sf-${GITHUB_REF_NAME}-${TARGET}.tar.gz"
+          tar -C "target/${TARGET}/release" -czf "$archive" sf
           sha256sum "$archive" > "${archive}.sha256"
           echo "ARCHIVE=$archive" >> "$GITHUB_ENV"
 
