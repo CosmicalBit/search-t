@@ -51,7 +51,11 @@ install -m 755 search-t ~/.local/bin/search-t</code></pre>
 
 <h3>Build from source</h3>
 
-<p>Install Rust 1.95 or newer, then run:</p>
+<p>
+  Install <a href="https://rustup.rs/">rustup</a>, then run the commands below.
+  The repository automatically selects Rust nightly and installs the required
+  Clippy and rustfmt components.
+</p>
 
 <pre><code>git clone https://github.com/SomeFlyingThing/search-t.git
 cd search-t

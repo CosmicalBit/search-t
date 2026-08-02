@@ -52,10 +52,11 @@ pub fn dir_recursive_search(path: &Path, pattern: &[u8], to_ignore: Option<&[Pat
             let path = entry.path();
 
             if let Some(to_ignore) = to_ignore
-                && to_ignore.contains(&path) {
-                    return Ok(Vec::new());
-                }
-            
+                && to_ignore.contains(&path)
+            {
+                return Ok(Vec::new());
+            }
+
             if metadata.is_file() {
                 file_search(&path, pattern)
             } else if metadata.is_dir() {
