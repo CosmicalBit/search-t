@@ -4,8 +4,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub fn parse_gitgnore(path: &Path) -> io::Result<Vec<PathBuf>> {
-    let mut file = OpenOptions::new().read(true).write(false).create(false).open(path)?;
+pub fn parse_gitgnore(path: &Path) -> io::Result<Option<Vec<PathBuf>>> {
+    let mut file = match OpenOptions::new().read(true).write(false).create(false).open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error),
+    };
     let base = path.parent().unwrap_or_else(|| Path::new("."));
 
     let mut contents = String::new();
@@ -28,5 +32,5 @@ pub fn parse_gitgnore(path: &Path) -> io::Result<Vec<PathBuf>> {
         to_ignore.push(path);
     }
 
-    Ok(to_ignore)
+    Ok(Some(to_ignore))
 }

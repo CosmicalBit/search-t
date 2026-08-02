@@ -16,7 +16,7 @@ fn main() -> io::Result<()> {
 
     let current_dir = env::current_dir()?;
     let to_ignore = parse_gitgnore(&current_dir.join(".gitignore"))?;
-    let search_result = dir_recursive_search(&current_dir, &to_search, &to_ignore)?;
+    let search_result = dir_recursive_search(&current_dir, &to_search, to_ignore.as_deref())?;
     search_result.iter().for_each(|res| println!("{res}"));
 
     Ok(())

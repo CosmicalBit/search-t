@@ -42,7 +42,7 @@ impl Display for Found {
 /// #Error
 ///
 /// returns a error if io op fails or if entry metadata cant be read
-pub fn dir_recursive_search(path: &Path, pattern: &[u8], to_ignore: &[PathBuf]) -> io::Result<Vec<Found>> {
+pub fn dir_recursive_search(path: &Path, pattern: &[u8], to_ignore: Option<&[PathBuf]>) -> io::Result<Vec<Found>> {
     let files: Vec<DirEntry> = read_dir(path)?.collect::<io::Result<Vec<_>>>()?;
 
     let collections = files
@@ -51,10 +51,11 @@ pub fn dir_recursive_search(path: &Path, pattern: &[u8], to_ignore: &[PathBuf]) 
             let metadata = entry.metadata()?;
             let path = entry.path();
 
-            if to_ignore.contains(&path) {
-                return Ok(Vec::new());
-            }
-
+            if let Some(to_ignore) = to_ignore
+                && to_ignore.contains(&path) {
+                    return Ok(Vec::new());
+                }
+            
             if metadata.is_file() {
                 file_search(&path, pattern)
             } else if metadata.is_dir() {
