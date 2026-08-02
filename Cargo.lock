@@ -172,7 +172,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "search-t"
+name = "sf"
 version = "0.1.0"
 dependencies = [
  "memchr",
