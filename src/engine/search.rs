@@ -1,106 +1,93 @@
 use std::{
-    env::current_dir,
     fmt::{self, Display},
-    fs::{DirEntry, OpenOptions, read_dir},
+    fs::{ File, read_dir},
     io::{self, Read},
-    os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
 };
 
-use memchr::memmem;
 use owo_colors::OwoColorize;
-use rayon::prelude::*;
 
 pub struct Found {
+    line: Box<[u8]>,
     path: PathBuf,
-    text: Vec<u8>,
-    line: usize,
-    collum: usize,
-    len: usize,
+    line_number: usize,
+    search_query: Box<[u8]>,
 }
-impl Display for Found {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (before, rest) = self.text.split_at(self.collum);
-        let (matched, after) = rest.split_at(self.len);
 
-        write!(
-            formatter,
-            "{}: {}: {}: {}{}{}",
-            self.path.display(),
-            self.line,
-            self.collum,
-            String::from_utf8_lossy(before),
-            String::from_utf8_lossy(matched).green(),
-            String::from_utf8_lossy(after)
-        )
+impl Found {
+    fn new(path: PathBuf, line_number: usize, line: &[u8], search_query: &[u8]) -> Self {
+        Found {
+            path,
+            line_number,
+            line: Box::<[u8]>::from(line),
+            search_query: Box::<[u8]>::from(search_query),
+        }
     }
 }
 
-///Recursively searches  the directory for a byte pattern.
-/// returns struct Found that contains path, text, line, collum.
-///
-/// #Error
-///
-/// returns a error if io op fails or if entry metadata cant be read
-pub fn dir_recursive_search(path: &Path, pattern: &[u8], to_ignore: Option<&[PathBuf]>) -> io::Result<Vec<Found>> {
-    let files: Vec<DirEntry> = read_dir(path)?.collect::<io::Result<Vec<_>>>()?;
+/// this function itenerates over a dir and calls read_file and then search file
+/// it return Result<()> but it updates the 'found list' with new found items
+pub fn dir_iter(dir: &Path, contents_storage: &mut Vec<u8>, found_list: &mut Vec<Found>, search_query: &[u8]) -> io::Result<()> {
+    for item in read_dir(dir)? {
+        let item = item?;
+        let path = item.path();
 
-    let collections = files
-        .into_par_iter()
-        .map(|entry: DirEntry| {
-            let metadata = entry.metadata()?;
-            let path = entry.path();
+        if path.is_dir() {
+            dir_iter(&path, contents_storage, found_list, search_query)?;
+        }
+        if path.is_file() {
+            read_file(&path, contents_storage)?;
+            search_file(contents_storage, search_query, found_list, &path);
 
-            if let Some(to_ignore) = to_ignore
-                && to_ignore.contains(&path)
-            {
-                return Ok(Vec::new());
-            }
-
-            if metadata.is_file() {
-                file_search(&path, pattern)
-            } else if metadata.is_dir() {
-                dir_recursive_search(&path, pattern, to_ignore)
-            } else {
-                Ok(Vec::new())
-            }
-        })
-        .collect::<io::Result<Vec<_>>>()?;
-
-    Ok(collections.into_iter().flatten().collect())
-}
-
-fn file_search(path: &Path, pattern: &[u8]) -> io::Result<Vec<Found>> {
-    let mut vec = Vec::new();
-
-    let mut file = OpenOptions::new().read(true).write(false).create(false).open(path)?;
-
-    let size = file.metadata()?.size();
-
-    let mut contents = Vec::with_capacity(size as usize);
-    file.read_to_end(&mut contents)?;
-
-    find_pattern(pattern, &contents, &mut vec, path)?;
-
-    Ok(vec)
-}
-
-fn find_pattern(pattern: &[u8], contents: &[u8], collection_found: &mut Vec<Found>, path: &Path) -> io::Result<()> {
-    for (line_num, line) in contents.split(|byte| *byte == b'\n').enumerate() {
-        if line.windows(pattern.len()).any(|candidate| candidate == pattern) {
-            let collum = memmem::find(line, pattern).ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "cant find collum of pattern in line that contains pattern"))?;
-
-            let current_path = current_dir()?;
-            let data = Found {
-                path: path.strip_prefix(current_path).map_err(io::Error::other)?.into(),
-                text: line.to_vec(),
-                line: line_num,
-                collum,
-                len: pattern.len(),
-            };
-
-            collection_found.push(data);
+            //clear the contents  storage after use so it can be over written
+            contents_storage.clear();
         }
     }
     Ok(())
+}
+
+fn read_file(path: &Path, contents_storage: &mut Vec<u8>) -> io::Result<()> {
+    let mut file = File::open(path)?;
+
+    let len = file.metadata()?.len();
+    contents_storage.reserve(len as usize);
+
+    file.read_to_end(contents_storage)?;
+
+    Ok(())
+}
+
+fn search_file(contents: &[u8], search_query: &[u8], found_list: &mut Vec<Found>, path: &Path) {
+    if search_query.is_empty() {
+        return;
+    }
+
+    for (line_number, line) in contents.split(|&b| b == b'\n').enumerate() {
+        //found at index
+        if line.windows(search_query.len()).any(|f| f == search_query) {
+            let found = Found::new(PathBuf::from(path), line_number, line, search_query);
+
+            found_list.push(found);
+        }
+    }
+}
+
+impl Display for Found {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let word_start = self
+            .line
+            .windows(self.search_query.len())
+            .position(|x| x == self.search_query.as_ref())
+            .unwrap();
+    
+        let end = word_start + self.search_query.len() + 1;
+
+        let before_word = String::from_utf8_lossy(&self.line[..word_start]);
+        let word = String::from_utf8_lossy(&self.search_query);
+        let after_word = String::from_utf8_lossy(&self.line[end..]);
+
+        write!(f, "{}-> {}: {}{}{}", self.path.display(),self.line_number, before_word, word.blue(), after_word)?;
+
+        Ok(())
+    }
 }

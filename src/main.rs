@@ -1,33 +1,42 @@
 use std::{
-    env::{self, args_os},
+    env::current_dir,
     io::{self},
-    os::unix::ffi::OsStringExt,
+    path::PathBuf,
 };
 
-use crate::engine::{gitgnore::parse_gitgnore, search::dir_recursive_search};
+use clap::Parser;
+use owo_colors::OwoColorize;
+use crate::engine::search::dir_iter;
 
 mod engine;
 
-fn main() -> io::Result<()> {
-    let Some(to_search) = parse() else {
-        println!("no args provided");
-        return Ok(());
-    };
-
-    let current_dir = env::current_dir()?;
-    let to_ignore = parse_gitgnore(&current_dir.join(".gitignore"))?;
-    let search_result = dir_recursive_search(&current_dir, &to_search, to_ignore.as_deref())?;
-    search_result.iter().for_each(|res| println!("{res}"));
-
-    Ok(())
+#[derive(Parser)]
+struct Args {
+    query: String,
+   
+    #[arg(default_value = ".")]
+    path: Option<PathBuf>,
 }
 
-fn parse() -> Option<Vec<u8>> {
-    let args: Vec<u8> = args_os().skip(1).flat_map(OsStringExt::into_vec).collect();
+fn main() -> io::Result<()> {
+    let args = Args::parse();
 
-    if args.is_empty() {
-        return None;
+    let dir_path = match args.path {
+        Some(path) => path,
+        None => current_dir()?,
+    };
+
+    let mut contents_storage = Vec::new();
+    let mut found_list = Vec::with_capacity(256);
+
+    let query = args.query;
+    dir_iter(&dir_path, &mut contents_storage, &mut found_list, query.as_bytes())?;
+
+    if found_list.is_empty(){
+        println!("no occurence of {} was found", query.blue() );
+        return Ok(())
     }
+    found_list.iter().for_each(|f| println!("{f}"));
 
-    Some(args)
+    Ok(())
 }
