@@ -1,7 +1,8 @@
 use std::{
     fmt::{self, Display},
-    fs::{File,DirEntry, read_dir},
+    fs::{DirEntry, File, read_dir},
     io::{self, Read},
+    os::unix::fs::FileTypeExt,
     path::{Path, PathBuf},
 };
 
@@ -28,7 +29,7 @@ impl Found {
 
 ///fn returns Vec<Found> but it calls underneath the search fn and read file fn
 /// it is multithreaded
-pub fn dir_iter(dir: &Path, search_query: &[u8]) -> io::Result<Vec<Found>> {
+pub fn dir_iter(dir: &Path, search_query: &[u8], to_ignore: &Vec<PathBuf>) -> io::Result<Vec<Found>> {
     let entries: Vec<Result<DirEntry, io::Error>> = read_dir(dir)?.collect();
 
     //itenerates building a vec of vec of found
@@ -37,9 +38,14 @@ pub fn dir_iter(dir: &Path, search_query: &[u8]) -> io::Result<Vec<Found>> {
         .map(|item| -> io::Result<Vec<Found>> {
             let item = item?;
             let path = item.path();
+            let file_type = item.file_type()?;
+
+            if to_ignore.contains(&path) || file_type.is_symlink() {
+                return Ok(Vec::new());
+            }
 
             if path.is_dir() {
-                return dir_iter(&path, search_query);
+                return dir_iter(&path, search_query, to_ignore);
             }
 
             if path.is_file() {
@@ -47,6 +53,11 @@ pub fn dir_iter(dir: &Path, search_query: &[u8]) -> io::Result<Vec<Found>> {
                 let mut found_list = Vec::new();
 
                 read_file(&path, &mut contents_storage)?;
+
+                if contents_storage.is_binary() {
+                    return Ok(Vec::new());
+                }
+
                 search_file(&contents_storage, search_query, &mut found_list, &path);
 
                 return Ok(found_list);
@@ -95,11 +106,11 @@ impl Display for Found {
             .position(|x| x == self.search_query.as_ref())
             .unwrap();
 
-        let end = word_start + self.search_query.len() + 1;
+        let end = word_start + self.search_query.len();
 
-        let before_word = String::from_utf8_lossy(&self.line[..word_start]);
-        let word = String::from_utf8_lossy(&self.search_query);
-        let after_word = String::from_utf8_lossy(&self.line[end..]);
+        let before_word = String::from_utf8_lossy(&self.line[..word_start]).to_string();
+        let word = String::from_utf8_lossy(&self.search_query).to_string();
+        let after_word = String::from_utf8_lossy(&self.line[end..]).to_string();
 
         write!(
             f,
@@ -114,3 +125,11 @@ impl Display for Found {
         Ok(())
     }
 }
+
+pub trait Files: AsRef<[u8]> {
+    fn is_binary(&self) -> bool {
+        self.as_ref().iter().take(8192).any(|&byte| byte == 0)
+    }
+}
+
+impl Files for Vec<u8> {}

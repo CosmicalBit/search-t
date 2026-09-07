@@ -7,7 +7,7 @@ use std::{
 use clap::Parser;
 use owo_colors::OwoColorize;
 
-use crate::engine::search::dir_iter;
+use crate::engine::{gitgnore::to_ignore, search::dir_iter};
 
 mod engine;
 
@@ -28,12 +28,16 @@ fn main() -> io::Result<()> {
     };
 
     let query = args.query;
-    let found_list = dir_iter(&dir_path, query.as_bytes())?;
+
+    let ignore_list = to_ignore()?;
+    
+    let found_list = dir_iter(&dir_path, query.as_bytes(),&ignore_list)?;
 
     if found_list.is_empty() {
         println!("no occurence of {} was found", query.blue());
         return Ok(());
     }
+    
     found_list.iter().for_each(|f| println!("{f}"));
 
     Ok(())
