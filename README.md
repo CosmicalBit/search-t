@@ -3,9 +3,9 @@
   <p>A fast, parallel file-content search tool written in Rust.</p>
 
   <p>
-    <a href="https://github.com/SomeFlyingThing/search-t/actions/workflows/rust.yml">CI</a>
+    <a href="https://github.com/CosmicalBit/search-t/actions/workflows/rust.yml">CI</a>
     ·
-    <a href="https://github.com/SomeFlyingThing/search-t/releases">Releases</a>
+    <a href="https://github.com/CosmicalBit/search-t/releases">Releases</a>
     ·
     <a href="LICENSE">Apache-2.0 License</a>
   </p>
@@ -43,7 +43,7 @@
 
 <p>
   Linux x86-64 archives and SHA-256 checksums are available on the
-  <a href="https://github.com/SomeFlyingThing/search-t/releases">releases page</a>.
+  <a href="https://github.com/CosmicalBit/search-t/releases">releases page</a>.
 </p>
 
 <pre><code>tar -xzf sf-v0.1.0-x86_64-unknown-linux-gnu.tar.gz
@@ -57,7 +57,7 @@ install -m 755 sf ~/.local/bin/sf</code></pre>
   Clippy and rustfmt components.
 </p>
 
-<pre><code>git clone https://github.com/SomeFlyingThing/search-t.git
+<pre><code>git clone https://github.com/CosmicalBit/search-t.git
 cd search-t
 cargo build --release --locked
 install -m 755 target/release/sf ~/.local/bin/sf</code></pre>
